@@ -90,31 +90,36 @@ def send_emails(email_to, subject_key, location, temp, cond):
     )
 
 
-def call_wu_api(zip_code):
+def read_weather(zip_code):
+
+    def get_cond(parsed_json):
+        return (parsed_json['current_observation']['display_location']['full'],
+        float(parsed_json['current_observation']['temp_f']),
+        parsed_json['current_observation']['weather'],
+        float(parsed_json['current_observation']['precip_1hr_metric']))
     wu_url = "http://api.wunderground.com/api/%s/conditions/q/%s.json" % (WU_API_KEY, zip_code)
-    logger.info(wu_url)
-    f = urllib2.urlopen(wu_url)
-    json_string = f.read()
-    parsed_json = json.loads(json_string)
-    location = parsed_json['current_observation']['display_location']['full']
-    temp_f = float(parsed_json['current_observation']['temp_f'])
-    weather_descr = parsed_json['current_observation']['weather']
-    precip_1hr_in = float(parsed_json['current_observation']['precip_1hr_metric'])
-    f.close()
-
+    location, temp_f, weather_descr, precip_1hr_in = call_wu_api(wu_url, get_cond)
+    
+    def get_hist(parsed_json):
+        return (float(parsed_json['almanac']['temp_high']['normal']['F']),
+        float(parsed_json['almanac']['temp_low']['normal']['F']))
     wu_url = "http://api.wunderground.com/api/%s/almanac/q/%s.json" % (WU_API_KEY, zip_code)
-    logger.info(wu_url)
-    f = urllib2.urlopen(wu_url)
-    json_string = f.read()
-    parsed_json = json.loads(json_string)
-    temp_f_hi = float(parsed_json['almanac']['temp_high']['normal']['F'])
-    temp_f_low = float(parsed_json['almanac']['temp_low']['normal']['F'])
-    f.close()
-
+    temp_f_hi, temp_f_low = call_wu_api(wu_url, get_hist)
+    
     weather_type = convert_weather_descr_and_tempr_to_type(weather_descr, temp_f, temp_f_hi, temp_f_low, precip_1hr_in)
     logger.info("Current temperature in %s is: %s, weather conditions: %s" % (location, temp_f, weather_descr))
     logger.info("Normal high is %s, and normal low is: %s" % (temp_f_hi, temp_f_low))
     return (weather_type, location, temp_f, weather_descr)
+
+
+def call_wu_api(url, reader):
+    f = urllib2.urlopen(url)
+    try:
+        json_string = f.read()
+        parsed_json = json.loads(json_string)
+        return reader(parsed_json)
+    finally:
+        f.close()
 
 
 def make_conn():
@@ -131,7 +136,7 @@ def insert_data(conn, email, zip_code):
     with conn.cursor() as cur:
         cur.execute('insert into kw_emails_zips (email, zip_code) values(%s, %s)', [email, zip_code])
         conn.commit()
-        logger.info('email: %s, zip_code: %s' % (email, zip_code)
+        logger.info("email: %s, zip_code: %s" % (email, zip_code))
 
 
 def fetch_data_and_email(conn):
@@ -143,7 +148,7 @@ def fetch_data_and_email(conn):
             logger.info(row)
             logger.info('email: ' + row[0])
             logger.info('zip code: ' + row[1])
-            (weather_type, location, temp_f, condition) = call_wu_api(row[1])
+            (weather_type, location, temp_f, condition) = read_weather(row[1])
             logger.info("weather type: %s" % weather_type)
             send_emails(row[0], weather_type, location, temp_f, condition)
         logger.info('Emailed messages: %d' % (item_count))
