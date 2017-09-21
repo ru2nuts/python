@@ -12,7 +12,7 @@
 #   -d '{"email":"zzz@example.com","zip_code":"96795"}' \
 #   https://zzz.execute-api.us-east-1.amazonaws.com/prod/lambda_name
 #
-#   curl -H 'Content-Type: application/json' -X GET https://zzz.execute-api.us-east-1.amazonaws.com/prod/lambda_name
+#   curl -H 'Content-Type: application/json' -X GET https://zzz.execute-api.us-east-1.amazonaws.com/prod/lambda_name?activation_key=123
 #
 
 import boto3
@@ -38,6 +38,7 @@ DB_NAME = os.environ['db_name']
 DB_LOGIN = os.environ['db_login']
 DB_PASSWORD = os.environ['db_password']
 DB_PORT = 3306
+ACTIVATION_KEY = os.environ['activation_key']
 
 
 def respond(err, res=None):
@@ -69,7 +70,11 @@ def lambda_handler(event, context):
         return respond(None, 'Email added: ' + email + ', zip code: ' + zip_code)
     elif operation == 'GET':
         logger.info('method=GET')
-        #retrieve all records from DB, make WU calls, sent out emails
+        akey = str(event['queryStringParameters']['activation_key'])
+        if akey != ACTIVATION_KEY:
+            logger.error("Invalid activation key: %s" % akey)
+            sys.exit()
+        #retrieve all records from DB, make WU calls, send out emails
         fetch_data_and_email(make_conn())
         return respond(None, 'emails sent')
     else:
