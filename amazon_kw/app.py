@@ -7,6 +7,9 @@
 #
 # Lambda environment variables are used for DB credentials, WU API key, etc.
 #
+# DB table structure is:
+# create table kw_emails_zips (email varchar(256) PRIMARY KEY, zip_code varchar(5));
+#
 # Invokation:
 #   curl -H 'Content-Type: application/json' -X PUT \
 #   -d '{"email":"zzz@example.com","zip_code":"96795"}' \
