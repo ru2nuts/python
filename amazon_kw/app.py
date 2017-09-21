@@ -22,6 +22,7 @@ import urllib2
 import pymysql
 import sys
 import logging
+import re
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -57,6 +58,12 @@ def lambda_handler(event, context):
         parsed_json = json.loads(event['body'])
         email = parsed_json['email']
         zip_code = parsed_json['zip_code']
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            logger.error("Invalid email format: %s" % email)
+            sys.exit()
+        if not re.match(r"\d{5}", zip_code):
+            logger.error("Invalid zip code format: %s" % zip_code)
+            sys.exit()
         #save to DB
         insert_data(make_conn(), email, zip_code)
         return respond(None, 'Email added: ' + email + ', zip code: ' + zip_code)
