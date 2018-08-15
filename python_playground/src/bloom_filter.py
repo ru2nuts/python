@@ -3,7 +3,7 @@ from bitarray import bitarray
 from struct import unpack
 
 bit_array = bitarray(160)
-slice = 2^40-1
+slice = 2 ^ 40 - 1
 
 bit_array.setall(0)
 
@@ -61,11 +61,6 @@ for c in ['g', 'h', 'i']:
     print(bloom_test(c))
     print(bit_array)
 
-
-
-# for c in range(1, 70):
-#     bloom_put(str(c))
-#     print(bit_array)
-
-
-
+for c in range(1, 70):
+    bloom_put(str(c))
+    print(bit_array)
